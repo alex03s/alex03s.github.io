@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COVID-19 Martini Glass Narrative</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/d3-svg-annotation@2.5.1/d3-annotation.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    #chart { margin: 20px auto; }
+    .nav-buttons { margin-top: 10px; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    .annotation { font-size: 14px; }
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 5px;
+      pointer-events: none;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>COVID-19 Martini Glass Narrative</h1>
+  <svg id="chart" width="900" height="820"></svg>
+  <div class="nav-buttons">
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+  </div>
+  <div id="tooltip" class="tooltip"></div>
+
+
+  <script>
+    const svg = d3.select('#chart');
+    const width = +svg.attr('width');
+    const height = +svg.attr('height');
+
+
+    let currentScene = 0;
+    const totalScenes = 3;
+
+
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const formatDate = d3.timeFormat('%b %d, %Y');
+
+
+    const covidLineData = [
+      { date: '2020-03-01', value: 5 },
+      { date: '2021-03-01', value: 48.292 },
+      { date: '2021-05-02', value: 102.205 },
+      { date: '2021-11-24', value: 71.126 },
+      { date: '2022-01-01', value: 300 },
+      { date: '2022-01-15', value: 400 },
+      { date: '2022-01-26', value: 432.582 },
+      { date: '2022-05-01', value: 450 },
+      { date: '2022-08-01', value: 600 },
+      { date: '2022-12-30', value: 794.069 },
+      { date: '2023-01-30', value: 90 },
+      { date: '2025-07-20', value: 48.292 },
+    ].map(d => ({ date: parseDate(d.date), value: d.value }));
+
+
+    const pieData = [
+      { country: 'United States', percent: 15.88 },
+      { country: 'India', percent: 6.39 },
+      { country: 'France', percent: 5.70 },
+      { country: 'Germany', percent: 5.51 },
+      { country: 'Brazil', percent: 5.50 },
+      { country: 'South Korea', percent: 4.91 },
+      { country: 'Japan', percent: 4.80 },
+      { country: 'Italy', percent: 3.79 },
+      { country: 'United Kingdom', percent: 3.53 },
+      { country: 'Russia', percent: 3.42 },
+      { country: 'Turkey', percent: 2.45 },
+      { country: 'Spain', percent: 1.97 },
+      { country: 'Australia', percent: 1.68 },
+      { country: 'Vietnam', percent: 1.65 },
+      { country: 'Taiwan', percent: 1.45 },
+      { country: 'Argentina', percent: 1.44 },
+      { country: 'Netherlands', percent: 1.23 },
+      { country: 'Other', percent: 18.15 }
+    ];
+
+
+    const x = d3.scaleTime().domain(d3.extent(covidLineData, d => d.date)).range([50, width - 50]);
+    const y = d3.scaleLinear().domain([0, d3.max(covidLineData, d => d.value) * 1.1]).range([height - 200, 50]);
+
+
+    function clearScene() { svg.selectAll('*').remove(); }
+
+
+    function showScene1() {
+      clearScene();
+      svg.append('text')
+        .attr('x', width / 2).attr('y', 30)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '20px')
+        .text('Scene 1: Average Daily COVID-19 Cases Over Time, Worldwide');
+
+
+      const line = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.value));
+
+
+      svg.append('path')
+        .datum(covidLineData)
+        .attr('fill', 'none')
+        .attr('stroke', '#0077b6')
+        .attr('stroke-width', 2)
+        .attr('d', line);
+
+
+      const events = [
+        { date: '2021-03-01', value: 48.292, label: 'Vaccines widely available (Mar 1, 2021)' },
+        { date: '2021-05-02', value: 102.205, label: 'WHO identifies Delta variant as a concern (May 2, 2021)' },
+        { date: '2021-11-24', value: 71.126, label: 'Omicron variant first identified in Botswana (November 24, 2021)' },
+        { date: '2022-01-26', value: 432.582, label: 'Surge in Delta variant cases (January 26, 2022)' },
+        { date: '2022-12-30', value: 794.069, label: 'Surge in Omicron cases, peak of avg. worldwide COVID cases (Dec 30, 2022)' }
+      ];
+
+
+      const tooltip = d3.select('#tooltip');
+
+
+      svg.selectAll('circle.event')
+        .data(events)
+        .enter()
+        .append('circle')
+        .attr('class', 'event')
+        .attr('cx', d => x(parseDate(d.date)))
+        .attr('cy', d => y(d.value))
+        .attr('r', 5)
+        .attr('fill', 'red')
+        .on('mouseover', (event, d) => {
+          tooltip.transition().duration(200).style('opacity', 1);
+          tooltip.html(d.label + '<br/>Cases: ' + d.value.toLocaleString())
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', () => {
+          tooltip.transition().duration(200).style('opacity', 0);
+        });
+
+
+      const xAxis = d3.axisBottom(x).ticks(8);
+      svg.append('g')
+        .attr('transform', `translate(0, ${height - 200})`)
+        .call(xAxis);
+
+
+      const yAxis = d3.axisLeft(y);
+      svg.append('g')
+        .attr('transform', `translate(50, 0)`)
+        .call(yAxis)
+        .append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -height / 2)
+        .attr('y', -40)
+        .attr('fill', 'black')
+        .attr('text-anchor', 'middle')
+        .text('Cases per million');
+    }
+
+
+    function showScene2() {
+      clearScene();
+      svg.append('text')
+        .attr('x', width / 2).attr('y', 30)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '20px')
+        .text('Scene 2: Percentage of total COVID Cases by Country');
+
+
+      const radius = Math.min(width, height) / 2 - 50;
+      const pie = d3.pie().value(d => d.percent);
+      const arc = d3.arc().outerRadius(radius).innerRadius(0);
+      const pieGroup = svg.append('g').attr('transform', `translate(${width / 2}, ${height / 2})`);
+      const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+
+      const arcs = pieGroup.selectAll('path')
+        .data(pie(pieData))
+        .enter().append('g');
+
+
+      arcs.append('path')
+        .attr('d', arc)
+        .attr('fill', (d, i) => color(i));
+
+
+      arcs.append('title')
+        .text(d => `${d.data.country}: ${d.data.percent.toFixed(2)}%`);
+
+
+      arcs.append('text')
+        .attr('transform', d => `translate(${arc.centroid(d)})`)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .text(d => d.data.country)
+        .on('mouseover', function(event, d) {
+          d3.select('#tooltip')
+            .style('opacity', 1)
+            .html(`${d.data.country}<br/>Percentage Of Cases: ${d.data.percent.toFixed(2)}%`)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', function() {
+          d3.select('#tooltip')
+            .style('opacity', 0);
+        });
+    }
+
+
+    function showScene3() {
+  clearScene();
+
+
+  svg.append('text')
+    .attr('x', width / 2)
+    .attr('y', 30)
+    .attr('text-anchor', 'middle')
+    .style('font-size', '20px')
+    .text('Scene 3: COVID Vaccination Rate by Country');
+
+
+  const barData = [
+    { country: 'Tokelau', rate: 470, total: '6.3K', continent: 'Oceania' },
+    { country: 'Chile', rate: 350, total: '66.9M', continent: 'South America' },
+    { country: 'Cuba', rate: 337, total: '38.2M', continent: 'North America' },
+    { country: 'Japan', rate: 324, total: '409.8M', continent: 'Asia' },
+    { country: 'Niue', rate: 304, total: '4.9K', continent: 'Oceania' },
+    { country: 'Nauru', rate: 297, total: '32.2K', continent: 'Oceania' },
+    { country: 'Brunei', rate: 296, total: '1.3M', continent: 'Asia' },
+    { country: 'Cambodia', rate: 285, total: '47.7M', continent: 'Asia' },
+    { country: 'Palau', rate: 282, total: '51K', continent: 'Oceania' },
+    { country: 'Turkmenistan', rate: 278, total: '16.8M', continent: 'Asia' },
+    { country: 'Peru', rate: 276, total: '91M', continent: 'South America' },
+    { country: 'Vietnam', rate: 274, total: '266.5M', continent: 'Asia' },
+    { country: 'Portugal', rate: 271, total: '27.9M', continent: 'Europe' },
+    { country: 'Australia', rate: 270, total: '68.8M', continent: 'Oceania' },
+    { country: 'Costa Rica', rate: 267, total: '13.6M', continent: 'North America' },
+    { country: 'South Korea', rate: 265, total: '135.9M', continent: 'Asia' },
+    { country: 'Qatar', rate: 264, total: '7.6M', continent: 'Asia' },
+    { country: 'Canada', rate: 262, total: '99M', continent: 'North America' },
+    { country: 'Singapore', rate: 262, total: '15.3M', continent: 'Asia' },
+    { country: 'Bhutan', rate: 261, total: '2M', continent: 'Asia' },
+    { country: 'Denmark', rate: 260, total: '15.1M', continent: 'Europe' }
+  ];
+
+
+  const margin = { top: 60, right: 40, bottom: 200, left: 80 };
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+
+
+  const x = d3.scaleBand()
+    .domain(barData.map(d => d.country))
+    .range([0, chartWidth])
+    .padding(0.2);
+
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(barData, d => d.rate) * 1.1])
+    .range([chartHeight, 0]);
+
+
+  const continentColor = d3.scaleOrdinal()
+    .domain(['Asia', 'Europe', 'North America', 'South America', 'Oceania'])
+    .range(['#00b4d8', '#f9844a', '#90be6d', '#f9c74f', '#8e44ad']);
+
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+
+  const tooltip = d3.select('#tooltip');
+
+
+  g.selectAll('rect')
+    .data(barData)
+    .enter()
+    .append('rect')
+    .attr('x', d => x(d.country))
+    .attr('y', d => y(d.rate))
+    .attr('width', x.bandwidth())
+    .attr('height', d => chartHeight - y(d.rate))
+    .attr('fill', d => continentColor(d.continent))
+    .on('mouseover', (event, d) => {
+      tooltip.transition().duration(200).style('opacity', 1);
+      tooltip.html(
+        `<strong>${d.country}</strong><br/>` +
+        `Vaccination Rate: ${d.rate} per 100k<br/>` +
+        `Total Doses: ${d.total}`
+      )
+      .style('left', (event.pageX + 10) + 'px')
+      .style('top', (event.pageY - 28) + 'px');
+    })
+    .on('mouseout', () => {
+      tooltip.transition().duration(200).style('opacity', 0);
+    });
+
+
+  g.append('g')
+    .attr('transform', `translate(0, ${chartHeight})`)
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .style("text-anchor", "end")
+    .attr("dx", "-0.8em")
+    .attr("dy", "0.15em")
+    .attr("transform", "rotate(-45)");
+
+
+  g.append('g')
+    .call(d3.axisLeft(y))
+    .append('text')
+    .attr('x', -chartHeight / 2)
+    .attr('y', -50)
+    .attr('transform', 'rotate(-90)')
+    .attr('text-anchor', 'middle')
+    .attr('fill', 'black')
+    .text('Doses per 100k');
+}
+
+
+
+
+
+
+    function updateScene() {
+      if (currentScene === 0) showScene1();
+      else if (currentScene === 1) showScene2();
+      else if (currentScene === 2) showScene3();
+    }
+
+
+    document.getElementById('next').addEventListener('click', () => {
+      if (currentScene < totalScenes - 1) currentScene++;
+      updateScene();
+    });
+
+
+    document.getElementById('prev').addEventListener('click', () => {
+      if (currentScene > 0) currentScene--;
+      updateScene();
+    });
+
+
+    updateScene();
+  </script>
+</body>
+</html>
